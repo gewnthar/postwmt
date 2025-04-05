@@ -1,0 +1,11 @@
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+instance/
+*.sqlite3
+# Consider adding config.py if you might put secrets there temporarily
+# config.py
+*.log
