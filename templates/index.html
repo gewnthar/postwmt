@@ -1,0 +1,53 @@
+{% extends "layout.html" %}
+
+{% block content %}
+
+  <div style="margin-bottom: 1em; padding: 0.5em; border: 1px solid #444; background-color: #2a2a2a;">
+    {% if current_user %}
+      Logged in as: <strong>{{ current_user.name or current_user.email }}</strong>
+      <a href="{{ logout_url }}" style="margin-left: 1em;">
+        <button type="button">Logout</button>
+      </a>
+    {% else %}
+      <a href="{{ login_url }}">
+          <button>Login with Google</button>
+      </a>
+      <span style="margin-left: 1em;"><em>(Login required to post to Google Calendar)</em></span>
+    {% endif %}
+  </div>
+
+  {# --- Main Form for both ICS and Google Calendar --- #}
+  {# We will use ONE textarea and decide where to send it #}
+  {# This requires slightly more complex form handling or JavaScript later #}
+  {# SIMPLER APPROACH FOR NOW: Two separate forms #}
+
+  {% if current_user %}
+    {# --- Form for SUBMITTING TO GOOGLE CALENDAR (shown only when logged in) --- #}
+    <div>
+      <h2>Post Schedule to Google Calendar</h2>
+      <form method="POST" action="{{ submit_google_url }}"> {# Action points to the new route #}
+        <div>
+          <textarea name="schedule_text" placeholder="Paste your raw schedule text here to submit to Google Calendar..." required rows="15"></textarea>
+        </div>
+        <div class="button-container">
+          <button type="submit">Submit to Google Calendar</button>
+        </div>
+      </form>
+    </div>
+    <hr>
+  {% endif %}
+  <div>
+    <h2>Alternative: Generate ICS File</h2>
+    <p><em>(No login required)</em></p>
+    {# --- Form for GENERATING ICS FILE --- #}
+    <form method="POST" action="{{ generate_ics_url }}">
+      <div>
+        {# Using a separate textarea for now for simplicity #}
+        <textarea name="schedule_text" placeholder="Paste your raw schedule text here to generate an ICS file..." required rows="15"></textarea>
+      </div>
+      <div class="button-container">
+        <button type="submit">Generate ICS File</button>
+      </div>
+    </form>
+  </div>
+   {% endblock %}
