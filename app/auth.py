@@ -22,8 +22,11 @@ def login():
 
     # Use the 'google' provider registered in __init__.py to generate the auth URL and redirect
     # This sends the user's browser to Google's login/consent page
-    return oauth.google.authorize_redirect(redirect_uri)
-
+    return oauth.google.authorize_redirect(
+        redirect_uri,
+        access_type='offline',
+        prompt='consent'
+    )
 
 @auth_bp.route('/callback')
 def callback():
