@@ -1,0 +1,51 @@
+{% extends "layout.html" %}
+
+{% block content %}
+  <h2>Privacy Policy for PostWMT Schedule Tool</h2>
+  <p><em>Last Updated: May 8, 2025</em></p>
+
+  <p>This Privacy Policy describes how PostWMT Schedule Tool (the "Application"), operated by Matthew Keddell ("I", "me", "my"), collects, uses, and handles your information when you use the Application to interact with Google services.</p>
+  <p>This Application is a personal tool hosted on your server at <code>gewnthar.dev</code>, designed for your personal use.</p>
+
+  <h3 class="mt-4">1. Information Collection and Use</h3>
+  <p>When you choose to log in with your Google account, the Application requests your permission to access specific information from Google for the following purposes:</p>
+  <ul>
+    <li><strong>Google User ID, Name, and Email Address:</strong> This information is retrieved from your Google profile upon successful authentication.
+      <ul>
+        <li><strong>Use:</strong> To identify you as a logged-in user, display your name/email within the application, and associate your Google account with the schedule data you submit.</li>
+      </ul>
+    </li>
+    <li><strong>Google Calendar Access (View and Edit Events):</strong> This permission is requested when you choose to submit your schedule to Google Calendar.
+      <ul>
+        <li><strong>Use:</strong> Solely to create new calendar events based on the schedule text you provide and submit through the Application. The Application will also delete previously created events (identified by a specific tag like "#postwmt" in the description) within the date range of your new submission to avoid duplicates and allow for schedule updates. The Application does not read or access any other existing calendar events unrelated to its own submissions, nor does it modify or delete events it did not create.</li>
+      </ul>
+    </li>
+  </ul>
+  <p><strong>Schedule Text You Provide:</strong> The schedule text you paste into the Application is processed in memory to parse event details. This raw text is not stored by the Application after processing for a given request.</p>
+
+  <h3 class="mt-4">2. Data Storage</h3>
+  <p>The following information is stored in the Application's MariaDB database, which resides on your server (<code>gewnthar.dev</code>):</p>
+  <ul>
+    <li>Your unique Google User ID.</li>
+    <li>Your email address (as provided by Google).</li>
+    <li>Your name (as provided by Google).</li>
+    <li>A Google Refresh Token: This token is provided by Google when you grant offline access (e.g., for calendar operations). It is stored securely and is used solely to obtain temporary access tokens to interact with the Google Calendar API on your behalf when you use the "Submit to Google Calendar" feature. Short-lived access tokens are not stored.</li>
+  </ul>
+
+  <h3 class="mt-4">3. Data Sharing</h3>
+  <p>The Application does not share any of your personal information or Google account data with any third parties.</p>
+
+  <h3 class="mt-4">4. User Rights and Data Deletion</h3>
+  <p>You can revoke the Application's access to your Google Account at any time by visiting your Google Account's security settings page: <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer">https://myaccount.google.com/permissions</a>. Revoking access will prevent the Application from accessing your Google Calendar.</p>
+  <p>If you wish to have your user data (Google ID, email, name, refresh token) deleted from the Application's database on your server, please contact me (Matthew Keddell) at <code>mkeddell@gmail.com</code>, or you can manage the database directly on your server.</p>
+
+  <h3 class="mt-4">5. Security</h3>
+  <p>I take reasonable measures to help protect information about you from loss, theft, misuse, and unauthorized access, disclosure, alteration, and destruction. The Application is accessed via HTTPS, and data is stored on your own server.</p>
+
+  <h3 class="mt-4">6. Changes to This Privacy Policy</h3>
+  <p>I may update this Privacy Policy from time to time. I will notify you of any changes by posting the new Privacy Policy on this page. You are advised to review this Privacy Policy periodically for any changes.</p>
+
+  <h3 class="mt-4">7. Contact Me</h3>
+  <p>If you have any questions about this Privacy Policy, please contact me at <code>mkeddell@gmail.com</code>.</p>
+
+{% endblock %}
