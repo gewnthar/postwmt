@@ -2,15 +2,16 @@
 import os
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate   # <--- Ensure this import is present
+from flask_migrate import Migrate
 from authlib.integrations.flask_client import OAuth
-from config import Config           # Loads config from .env via config.py
+from flask_wtf.csrf import CSRFProtect  # <--- Import CSRFProtect
+from config import Config
 
 # --- Initialize extensions globally but unbound ---
-# These objects don't represent a specific app yet, just the extension itself.
 db = SQLAlchemy()
-migrate = Migrate()                 # Now 'Migrate' class is known before use
+migrate = Migrate()
 oauth = OAuth()
+csrf = CSRFProtect()  # <--- Initialize CSRFProtect
 
 # --- Application Factory Function ---
 # This function creates and configures the Flask app instance.
@@ -33,6 +34,7 @@ def create_app(config_class=Config):
     db.init_app(app)
     migrate.init_app(app, db) # Flask-Migrate needs both app and db
     oauth.init_app(app)
+    csrf.init_app(app)  # <--- Initialize CSRFProtect with the app
 
     # --- Configure Google OAuth client using Authlib ---
     # This uses the GOOGLE_CLIENT_ID etc. loaded from config/env

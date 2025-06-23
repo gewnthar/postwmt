@@ -1,5 +1,6 @@
 import os # Often useful, though maybe not directly here yet
 from flask import Blueprint, url_for, redirect, session, current_app, flash
+from sqlalchemy.exc import SQLAlchemyError # Import SQLAlchemyError
 # Import User model and db instance from the main app package (__init__.py)
 from .models import User, db
 # Import the oauth object initialized in app/__init__.py
@@ -59,31 +60,43 @@ def callback():
         current_app.logger.info(f"User info received: google_id={google_id}, email={email}, name={name}, refresh_token_present={bool(refresh_token)}")
 
         # --- Database Interaction: Find or Create User ---
-        user = User.query.filter_by(google_id=google_id).first()
+        try:
+            user = User.query.filter_by(google_id=google_id).first()
 
-        if user:
-            # Existing user found
-            user.email = email # Update email/name in case they changed
-            user.name = name
-            if refresh_token:
-                user.google_refresh_token = refresh_token # Update refresh token if we got a new one
-                current_app.logger.info(f"Updating refresh token for existing user {email}")
+            if user:
+                # Existing user found
+                user.email = email # Update email/name in case they changed
+                user.name = name
+                if refresh_token:
+                    user.google_refresh_token = refresh_token # Update refresh token if we got a new one
+                    current_app.logger.info(f"Updating refresh token for existing user {email}")
+                else:
+                    current_app.logger.info(f"No new refresh token provided for existing user {email}")
+                current_app.logger.info(f"Attempting to commit update for existing user {email}")
             else:
-                current_app.logger.info(f"No new refresh token provided for existing user {email}")
-            db.session.commit() # Save changes
-            current_app.logger.info(f"Existing user logged in: {email}")
-        else:
-            # New user - create a record
-            new_user = User(
-                google_id=google_id,
-                email=email,
-                name=name,
-                google_refresh_token=refresh_token # Store the initial refresh token
-            )
-            db.session.add(new_user)
-            db.session.commit() # Save the new user
-            user = new_user # Proceed using the new user object
-            current_app.logger.info(f"New user created and logged in: {email}")
+                # New user - create a record
+                user = User( # Assign to 'user' directly
+                    google_id=google_id,
+                    email=email,
+                    name=name,
+                    google_refresh_token=refresh_token # Store the initial refresh token
+                )
+                db.session.add(user)
+                current_app.logger.info(f"Attempting to commit new user {email}")
+
+            db.session.commit() # Save changes (either update or new user)
+
+            if user.name: # Check if user was newly created or existing by checking name (could be more robust)
+                 current_app.logger.info(f"Successfully committed DB changes for user: {email}")
+            else: # Fallback logging
+                 current_app.logger.info(f"Successfully committed DB changes for google_id: {google_id}")
+
+
+        except SQLAlchemyError as e_sql:
+            db.session.rollback()
+            current_app.logger.error(f"Database error during user processing for {email}: {e_sql}", exc_info=True)
+            flash("A database error occurred while saving your information. Please try logging in again.", "danger")
+            return redirect(url_for('index')) # Assuming 'index' is your main page route name
         # --- End Database Interaction ---
 
         # --- Session Management ---

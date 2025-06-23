@@ -11,6 +11,9 @@ from googleapiclient.errors import HttpError
 from google.auth.exceptions import RefreshError
 import google.auth.transport.requests # Needed for credentials.refresh
 
+# Max length for schedule text input (e.g., 256KB)
+MAX_SCHEDULE_TEXT_LENGTH = 256 * 1024
+
 # --- Local App Imports ---
 try:
     # Assumes parser function is in app/parser.py
@@ -26,12 +29,15 @@ except ImportError as e:
 
 try:
     # Assumes ics generator function is in app/utils.py
-    from .utils import create_ics_content
+    from .utils import create_ics_content, insert_event # <--- IMPORT insert_event
 except ImportError as e:
-    print(f"ERROR: Failed to import create_ics_content: {e}")
+    print(f"ERROR: Failed to import from utils: {e}") # General message
     def create_ics_content(events):
         print("ERROR: create_ics_content dummy function called!")
         return ""
+    def insert_event(creds, event_details): # Dummy for insert_event
+        print("ERROR: insert_event dummy function called!")
+        return False
 
 # --- Application Routes ---
 
@@ -115,6 +121,9 @@ def submit_to_google():
     if not schedule_text:
         flash("No schedule text was submitted.", "warning")
         return redirect(url_for('index'))
+    if len(schedule_text) > MAX_SCHEDULE_TEXT_LENGTH:
+        flash(f"Schedule text is too long (max {MAX_SCHEDULE_TEXT_LENGTH // 1024}KB).", "warning")
+        return redirect(url_for('index'))
 
     current_app.logger.info(f"Received schedule text (length: {len(schedule_text)}) for Google Calendar submission.")
 
@@ -135,78 +144,50 @@ def submit_to_google():
     # --- Google Calendar API Interaction ---
     success_count = 0
     fail_count = 0
-    service = None # Initialize service to None
+    # service = None # Service will be built inside insert_event
+
     try:
         # 1. Create Credentials object from stored refresh token
         credentials = Credentials(
             None, # No access token initially
             refresh_token=user.google_refresh_token,
-            # Get token endpoint URL safely from Authlib's discovered metadata
             token_uri=oauth.google.server_metadata.get('token_endpoint'),
             client_id=current_app.config['GOOGLE_CLIENT_ID'],
             client_secret=current_app.config['GOOGLE_CLIENT_SECRET'],
             scopes=current_app.config['GOOGLE_SCOPES']
         )
 
-        # 2. Refresh the access token
+        # 2. Refresh the access token (must be done before passing creds to insert_event)
         try:
-            # Use google.auth.transport.requests.Request for the refresh request transport
             auth_req = google.auth.transport.requests.Request()
-            credentials.refresh(auth_req)
+            credentials.refresh(auth_req) # This refreshes credentials in place
             current_app.logger.info("Successfully refreshed Google access token.")
         except RefreshError as e:
             current_app.logger.error(f"Google refresh token failed: {e}. User may need to re-authenticate.")
-            session.pop('google_id', None)
-            # Consider deleting the bad refresh token from DB? Maybe not automatically.
+            session.pop('google_id', None) # Log out user
+            # Potentially clear the bad refresh token from DB
             # user.google_refresh_token = None
             # db.session.commit()
             flash("Your Google authorization has expired or was revoked. Please log in again.", "danger")
             return redirect(url_for('index'))
+        # At this point, 'credentials' object should be valid and refreshed.
 
-
-        # 3. Build the Google Calendar service client
-        # Use static_discovery=False for potentially more up-to-date API definitions
-        service = build('calendar', 'v3', credentials=credentials, static_discovery=False)
-
-        # 4. Insert events one by one
+        # 3. Insert events one by one using the utility function
         for event_data in parsed_events:
-            # Ensure datetimes have timezone info before formatting
-            if not event_data['start_dt'].tzinfo or not event_data['end_dt'].tzinfo:
-                 current_app.logger.warning(f"Skipping event for {event_data['date_str']} due to missing timezone info.")
+            # Basic check for necessary datetime objects; insert_event will do more robust validation
+            if not event_data.get('start_dt') or not event_data.get('end_dt'):
+                 current_app.logger.warning(f"Skipping event for {event_data.get('date_str', 'Unknown Date')} due to missing start/end dt in parsed_events.")
                  fail_count += 1
                  continue
 
-            event_resource = {
-                'summary': event_data['summary'],
-                'start': {
-                    'dateTime': event_data['start_dt'].isoformat(), # ISO 8601 format includes offset
-                    'timeZone': str(event_data['start_dt'].tzinfo), # Explicitly provide TZ identifier
-                },
-                'end': {
-                    'dateTime': event_data['end_dt'].isoformat(),
-                    'timeZone': str(event_data['end_dt'].tzinfo),
-                },
-                # 'description': f"Posted by PostWMT. Overtime: {event_data['is_overtime']}" # Optional
-            }
-
-            try:
-                current_app.logger.debug(f"Attempting to insert event: {event_resource['summary']} on {event_data['date_str']}")
-                created_event = service.events().insert(
-                    calendarId='primary', # Use the user's primary calendar
-                    body=event_resource
-                ).execute()
-                current_app.logger.info(f"Event created: {created_event.get('htmlLink')}")
+            # Call the refactored insert_event function
+            if insert_event(credentials, event_data): # Pass refreshed credentials
                 success_count += 1
-            except HttpError as error:
-                current_app.logger.error(f"An API error occurred inserting event for {event_data['date_str']}: {error}")
-                fail_count += 1
-            except Exception as e:
-                # Catch other potential errors during the API call for a specific event
-                current_app.logger.error(f"A non-API error occurred inserting event for {event_data['date_str']}: {e}", exc_info=True)
+            else:
                 fail_count += 1
         # --- End Google Calendar API Interaction ---
 
-        # Flash result message based on counts
+        # Flash result message based on counts (logic remains the same)
         if success_count > 0 and fail_count == 0:
             flash(f"Successfully posted {success_count} events to your Google Calendar!", "success")
         elif success_count > 0 and fail_count > 0:
@@ -240,7 +221,12 @@ def generate_ics():
     schedule_text = request.form.get('schedule_text', '')
     if not schedule_text:
         current_app.logger.error("Received empty schedule text for ICS generation.")
+        # Consider flashing a message if this were to redirect to index,
+        # but for a direct error response, this is fine.
         return "Please paste schedule text.", 400
+    if len(schedule_text) > MAX_SCHEDULE_TEXT_LENGTH:
+        current_app.logger.error(f"Schedule text too long for ICS generation: {len(schedule_text)} bytes.")
+        return f"Schedule text is too long (max {MAX_SCHEDULE_TEXT_LENGTH // 1024}KB).", 400 # 413 Payload Too Large might also be an option
     current_app.logger.info(f"Received schedule text (length: {len(schedule_text)}) for ICS generation.")
     try:
         parsed_events = parse_schedule_text(schedule_text)
