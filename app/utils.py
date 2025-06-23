@@ -95,24 +95,33 @@ def insert_event(creds: Credentials, event_details: dict) -> bool:
         service = build('calendar', 'v3', credentials=creds, static_discovery=False)
         current_app.logger.debug(f"Successfully built Google Calendar service object for {date_str}")
 
-        # Construct the event body WITHOUT the timeZone key
-        # Rely on the timezone offset included in the ISO format dateTime string
+        # Construct the event body, ensuring timezone information is explicitly included
+        # This matches the original logic in routes.py
         event_body = {
             'summary': summary,
             'start': {
-                'dateTime': start_dt_aware.isoformat(), # ISO format includes offset e.g., -04:00
-                # 'timeZone': SCHEDULE_TZ_NAME, # REMAINS REMOVED
+                'dateTime': start_dt_aware.isoformat(),
+                'timeZone': str(start_dt_aware.tzinfo),
             },
             'end': {
-                'dateTime': end_dt_aware.isoformat(), # ISO format includes offset
-                # 'timeZone': SCHEDULE_TZ_NAME, # REMAINS REMOVED
-           },
+                'dateTime': end_dt_aware.isoformat(),
+                'timeZone': str(end_dt_aware.tzinfo),
+            },
+            'reminders': { # Disable default reminders
+                'useDefault': False,
+                # 'overrides': [] # No specific overrides, so no reminders
+            },
+            # Optional: Add a description
+            # 'description': f"Posted by PostWMT. Original Date: {date_str}, Overtime: {event_details.get('is_overtime', False)}"
         }
 
-        # --- EXISTING CRITICAL DEBUG LINE ---
-        current_app.logger.debug(f"Event Body being sent from utils.py: {event_body}")
-        # --- END EXISTING DEBUG LINE ---
+        # Set event color to Sage Green (colorId '2') if it's overtime
+        if event_details.get('is_overtime', False):
+            event_body['colorId'] = '2' # Sage Green
 
+        current_app.logger.debug(f"Event Body being sent from utils.py for date {date_str}: {event_body}")
+
+        # The 'service' object is built inside this function using the provided 'creds'
         event = service.events().insert(calendarId='primary', body=event_body).execute()
         current_app.logger.info(f"Google Calendar Event created: {event.get('htmlLink')}")
         return True

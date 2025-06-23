@@ -26,6 +26,7 @@
     <div>
       <h2>Post Schedule to Google Calendar</h2>
       <form method="POST" action="{{ submit_google_url }}"> {# Action points to the new route #}
+        {{ csrf_token() }} {# <--- Add CSRF token field #}
         <div>
           <textarea name="schedule_text" placeholder="Paste your raw schedule text here to submit to Google Calendar..." required rows="15"></textarea>
         </div>
@@ -41,6 +42,7 @@
     <p><em>(No login required)</em></p>
     {# --- Form for GENERATING ICS FILE --- #}
     <form method="POST" action="{{ generate_ics_url }}">
+      {{ csrf_token() }} {# <--- Add CSRF token field #}
       <div>
         {# Using a separate textarea for now for simplicity #}
         <textarea name="schedule_text" placeholder="Paste your raw schedule text here to generate an ICS file..." required rows="15"></textarea>

@@ -140,12 +140,12 @@ def parse_schedule_text(text_schedule: str) -> list:
                     if next_date_match:
                         # Looks like the next date - push index back so outer loop processes it.
                         i -= 1
-                        current_app.logger.debug("Indicator not found, assuming next line is a date. Breaking inner loop.")
+                        current_app.logger.debug(f"Indicator not found for {current_date_str}, assuming next line '{indicator_line}' is a date. Breaking inner loop.")
                         current_date_str = None # Discard current date as no indicator was found for it
                         break # Exit inner loop
                     else:
                         # It's some other text (like maybe a Day Name that was on its own line). Ignore it.
-                        current_app.logger.debug(f"Ignoring non-indicator/non-date line while searching for indicator: '{indicator_line}'")
+                        current_app.logger.debug(f"Ignoring non-indicator/non-date line '{indicator_line}' while searching for indicator for {current_date_str}")
                         continue # Continue inner loop to check the *next* line for the indicator
             # End of inner while loop (looking for indicator)
 
