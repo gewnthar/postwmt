@@ -2,52 +2,73 @@
 
 {% block content %}
 
-  <div style="margin-bottom: 1em; padding: 0.5em; border: 1px solid #444; background-color: #2a2a2a;">
+  {# --- Login Status --- #}
+  <div class="mb-3 p-2 border rounded bg-body-tertiary">
     {% if current_user %}
       Logged in as: <strong>{{ current_user.name or current_user.email }}</strong>
-      <a href="{{ logout_url }}" style="margin-left: 1em;">
-        <button type="button">Logout</button>
-      </a>
     {% else %}
-      <a href="{{ login_url }}">
-          <button>Login with Google</button>
+      <h3 class="text-success fs-5">Post to Google Calendar requires Login</h3>
+      <a href="{{ url_for('auth.login') }}">
+          <button class="btn btn-primary btn-sm">Login with Google</button>
       </a>
-      <span style="margin-left: 1em;"><em>(Login required to post to Google Calendar)</em></span>
     {% endif %}
   </div>
 
-  {# --- Main Form for both ICS and Google Calendar --- #}
-  {# We will use ONE textarea and decide where to send it #}
-  {# This requires slightly more complex form handling or JavaScript later #}
-  {# SIMPLER APPROACH FOR NOW: Two separate forms #}
+  <div class="row g-4">
 
-  {% if current_user %}
-    {# --- Form for SUBMITTING TO GOOGLE CALENDAR (shown only when logged in) --- #}
-    <div>
-      <h2>Post Schedule to Google Calendar</h2>
-      <form method="POST" action="{{ submit_google_url }}"> {# Action points to the new route #}
-        <div>
-          <textarea name="schedule_text" placeholder="Paste your raw schedule text here to submit to Google Calendar..." required rows="15"></textarea>
+    {# --- Google Calendar Form (Only if logged in) --- #}
+    {% if current_user %}
+      <div class="col-md-6">
+        <div class="p-3 border rounded bg-body-tertiary h-100 d-flex flex-column">
+          <h3 class="text-success fs-5">Option A: Post to Google Calendar</h3>
+          <form id="google_form" method="POST" action="{{ url_for('submit_to_google') }}">
+            {{ csrf_token() }}
+            <div class="mb-3 flex-grow-1">
+              <label for="schedule_text_google" class="form-label">Paste schedule here:</label>
+              <textarea class="form-control" id="schedule_text_google" name="schedule_text" placeholder="Paste schedule from WMT's 'My Schedule'..." required rows="10" style="font-family: monospace; height: 100%;"></textarea>
+            </div>
+            <div class="d-flex justify-content-start align-items-center mt-auto">
+              <button type="submit" class="btn btn-primary me-2">Submit to Google Calendar</button>
+              <a href="{{ url_for('auth.logout') }}">
+                <button type="button" class="btn btn-outline-secondary">Logout</button>
+              </a>
+            </div>
+          </form>
         </div>
-        <div class="button-container">
-          <button type="submit">Submit to Google Calendar</button>
-        </div>
-      </form>
+      </div>
+    {% endif %}
+
+    {# --- ICS Generation Form (Always Visible) --- #}
+    <div class="{% if current_user %}col-md-6{% else %}col-md-12{% endif %}">
+      <div class="p-3 border rounded bg-body-tertiary h-100 d-flex flex-column">
+        <h3 class="text-warning fs-5">{% if current_user %}Option B:{% else %}Generate ICS File{% endif %}</h3>
+         {% if not current_user %}<p><em>(No login required)</em></p>{% endif %}
+         <form id="ics_form" method="POST" action="{{ url_for('generate_ics') }}">
+           {{ csrf_token() }}
+           <div class="mb-3 flex-grow-1">
+              <label for="schedule_text_ics" class="form-label">Paste schedule here:</label>
+              <textarea class="form-control" id="schedule_text_ics" name="schedule_text" placeholder="Paste schedule from WMT's 'My Schedule'..." required rows="10" style="font-family: monospace; height: 100%;"></textarea>
+           </div>
+           <button type="submit" class="btn btn-info mt-auto">Generate ICS File</button>
+         </form>
+       </div>
     </div>
-    <hr>
-  {% endif %}
-  <div>
-    <h2>Alternative: Generate ICS File</h2>
-    <p><em>(No login required)</em></p>
-    {# --- Form for GENERATING ICS FILE --- #}
-    <form method="POST" action="{{ generate_ics_url }}">
-      <div>
-        {# Using a separate textarea for now for simplicity #}
-        <textarea name="schedule_text" placeholder="Paste your raw schedule text here to generate an ICS file..." required rows="15"></textarea>
-      </div>
-      <div class="button-container">
-        <button type="submit">Generate ICS File</button>
-      </div>
-    </form>
+
   </div>
-   {% endblock %}
+
+  <hr class="my-4">
+
+  <details class="mt-4 mb-4 p-3 border rounded bg-body-tertiary text-body-secondary">
+    <summary style="cursor: pointer; font-weight: bold;" class="text-body-emphasis">Instructions & Data Access Info</summary>
+    <div class="mt-3">
+        <h3>Instructions</h3>
+        <ul>
+            <li>Copy and paste schedule text from the "My Schedule" page in WMT into the appropriate text area above.</li>
+            <li><strong>Note on Updates:</strong> Submitting to Google Calendar replaces any previously posted shifts in the same date range.</li>
+            <li><strong>Formats Understood:</strong> `8`, `8TEN`, `8$`, `X`, `A<13>`, `AOA<9>`, `AOB<17>`, etc.</li>
+        </ul>
+        <h3 class="mt-4">Data Access & Privacy</h3>
+        <p>Please review our full <a href="{{ url_for('privacy_policy') }}">Privacy Policy</a> for details.</p>
+    </div>
+  </details>
+{% endblock %}
