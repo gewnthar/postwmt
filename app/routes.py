@@ -3,15 +3,21 @@ from flask import (render_template, request, Response, current_app, url_for,
                    session, flash, redirect)
 from .models import User, db
 from app import oauth
+
+# --- Google API Imports ---
 from google.oauth2.credentials import Credentials
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 from google.auth.exceptions import RefreshError
 import google.auth.transport.requests
+
+# --- Datetime Imports ---
 from datetime import datetime, time, timedelta
 from dateutil import tz
 
 # --- Local App Imports ---
 from .parser import parse_schedule_text
-from .utils import create_ics_content, insert_event, delete_events_in_range, SCHEDULE_TZ_NAME
+from .utils import create_ics_content, insert_event, SCHEDULE_TZ_NAME
 
 # --- Application Routes ---
 
@@ -77,7 +83,28 @@ def submit_to_google():
         credentials.refresh(google.auth.transport.requests.Request())
         current_app.logger.info("Successfully refreshed Google access token.")
 
-        delete_count = delete_events_in_range(credentials, parsed_events)
+        service = build('calendar', 'v3', credentials=credentials, static_discovery=False)
+
+        # --- Delete & Insert Logic ---
+        delete_count = 0
+        min_dt = min(e['start_dt'] for e in parsed_events)
+        max_dt = max(e['end_dt'] for e in parsed_events)
+        schedule_tz = tz.gettz(SCHEDULE_TZ_NAME)
+        time_min = datetime.combine(min_dt.date(), time.min).replace(tzinfo=schedule_tz).isoformat()
+        time_max = datetime.combine(max_dt.date() + timedelta(days=1), time.min).replace(tzinfo=schedule_tz).isoformat()
+        
+        current_app.logger.info(f"Checking for existing #postwmt events between {time_min} and {time_max}")
+        page_token = None
+        while True:
+            existing = service.events().list(
+                calendarId='primary', timeMin=time_min, timeMax=time_max,
+                q='#postwmt', singleEvents=True, pageToken=page_token).execute()
+            for old_event in existing.get('items', []):
+                service.events().delete(calendarId='primary', eventId=old_event['id']).execute()
+                delete_count += 1
+            page_token = existing.get('nextPageToken')
+            if not page_token: break
+        current_app.logger.info(f"Deleted {delete_count} old #postwmt events.")
 
         success_count, fail_count = 0, 0
         for event in parsed_events:
@@ -85,7 +112,7 @@ def submit_to_google():
                 success_count += 1
             else:
                 fail_count += 1
-
+        
         if success_count > 0 and fail_count == 0:
             flash(f"Successfully processed schedule: {success_count} events posted (removed {delete_count} previous).", "success")
         elif success_count > 0:
