@@ -1,0 +1,33 @@
+{% extends "layout.html" %}
+
+{% block content %}
+  <h2>Privacy Policy for PostWMT Schedule Tool</h2>
+  <p><em>Last Updated: July 3, 2025</em></p>
+
+  <p>This Privacy Policy describes how this application ("the Application") handles your information when you use it to interact with Google services. This Application is a personal tool hosted on this server, designed for personal use.</p>
+
+  <h3 class="mt-4">1. Information Collection and Use</h3>
+  <p>When you log in with your Google account, the Application requests your permission to access specific information from Google for the following purposes:</p>
+  <ul>
+    <li><strong>Google User ID, Name, and Email Address:</strong> This information is retrieved from your Google profile upon successful authentication. It is used only to identify you as a logged-in user and to save your authorization details for future use.</li>
+    <li><strong>Google Calendar Access:</strong> This permission is required to create new calendar events based on the schedule text you provide and to delete previously created events (identified by a specific tag) to allow for schedule updates. The Application does not read or access any other existing calendar events.</li>
+  </ul>
+  <p>The schedule text you paste into the Application is processed in memory to parse event details and is not stored long-term by the Application.</p>
+
+  <h3 class="mt-4">2. Data Storage</h3>
+  <p>The following information is stored in the Application's database, which resides on this server:</p>
+  <ul>
+    <li>Your unique Google User ID, email address, and name.</li>
+    <li>A Google Refresh Token. This token allows the app to request access to your calendar on your behalf when you use the "Submit to Google Calendar" feature, without asking you to log in to Google every time.</li>
+  </ul>
+
+  <h3 class="mt-4">3. Data Sharing</h3>
+  <p>The Application does not share any of your personal information or Google account data with any third parties.</p>
+
+  <h3 class="mt-4">4. User Rights and Data Deletion</h3>
+  <p>You can revoke the Application's access to your Google Account at any time by visiting your <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer">Google Account permissions page</a>. If you wish to have your user data deleted from this application's database, you must do so through direct database management on the server.</p>
+
+  <h3 class="mt-4">5. Contact</h3>
+  <p>For questions about this privacy policy, please contact the server administrator.</p>
+
+{% endblock %}
