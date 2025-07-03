@@ -14,6 +14,7 @@
     {% endif %}
   </div>
 
+  {# --- Forms Side-by-Side on Medium+ Screens --- #}
   <div class="row g-4">
 
     {# --- Google Calendar Form (Only if logged in) --- #}
@@ -22,7 +23,7 @@
         <div class="p-3 border rounded bg-body-tertiary h-100 d-flex flex-column">
           <h3 class="text-success fs-5">Option A: Post to Google Calendar</h3>
           <form id="google_form" method="POST" action="{{ url_for('submit_to_google') }}">
-            {{ csrf_token() }}
+            {# CSRF Token Removed #}
             <div class="mb-3 flex-grow-1">
               <label for="schedule_text_google" class="form-label">Paste schedule here:</label>
               <textarea class="form-control" id="schedule_text_google" name="schedule_text" placeholder="Paste schedule from WMT's 'My Schedule'..." required rows="10" style="font-family: monospace; height: 100%;"></textarea>
@@ -44,7 +45,7 @@
         <h3 class="text-warning fs-5">{% if current_user %}Option B:{% else %}Generate ICS File{% endif %}</h3>
          {% if not current_user %}<p><em>(No login required)</em></p>{% endif %}
          <form id="ics_form" method="POST" action="{{ url_for('generate_ics') }}">
-           {{ csrf_token() }}
+           {# CSRF Token Removed #}
            <div class="mb-3 flex-grow-1">
               <label for="schedule_text_ics" class="form-label">Paste schedule here:</label>
               <textarea class="form-control" id="schedule_text_ics" name="schedule_text" placeholder="Paste schedule from WMT's 'My Schedule'..." required rows="10" style="font-family: monospace; height: 100%;"></textarea>
@@ -54,7 +55,8 @@
        </div>
     </div>
 
-  </div>
+  </div> {# End of row #}
+
 
   <hr class="my-4">
 
@@ -63,12 +65,24 @@
     <div class="mt-3">
         <h3>Instructions</h3>
         <ul>
-            <li>Copy and paste schedule text from the "My Schedule" page in WMT into the appropriate text area above.</li>
-            <li><strong>Note on Updates:</strong> Submitting to Google Calendar replaces any previously posted shifts in the same date range.</li>
-            <li><strong>Formats Understood:</strong> `8`, `8TEN`, `8$`, `X`, `A<13>`, `AOA<9>`, `AOB<17>`, etc.</li>
+          <li>Copy and paste the scheduler text from the <strong>"My Schedule"</strong> page/section in WMT into the appropriate text area above.</li>
+          <li>Click the corresponding button below the text area you used.</li>
+          <li><strong>Note on Updates:</strong> Clicking "Submit to Google Calendar" will first remove any previously added shifts (created by this tool and tagged #postwmt) within the date range of your pasted schedule before adding the new ones.</li>
+          <li><strong>Formats Understood:</strong>
+              <ul>
+                  <li>Start hours (0-23) for 8-hour shifts (e.g., `8`).</li>
+                  <li>`TEN` for 10-hour shifts (e.g., `8TEN`).</li>
+                  <li>`$` for overtime shifts (e.g., `8$` or `8TEN$`).</li>
+                  <li>`X` for Regular Days Off (ignored).</li>
+                  <li>`A&lt;HH&gt;` for Annual Leave (8hr event).</li>
+                  <li>`AOA&lt;HH&gt;` for OT after shift (creates two events).</li>
+                  <li>`AOB&lt;HH&gt;` for OT before shift (creates two events).</li>
+              </ul>
+          </li>
+          <li><strong style="color:#ffcc80;">DST Note:</strong> Shifts near Daylight Saving Time changes may need manual verification.</li>
         </ul>
         <h3 class="mt-4">Data Access & Privacy</h3>
-        <p>Please review our full <a href="{{ url_for('privacy_policy') }}">Privacy Policy</a> for details.</p>
+        <p>Please review our full <a href="{{ url_for('privacy_policy') }}">Privacy Policy</a> for details on data handling.</p>
     </div>
   </details>
-{% endblock %}
+  {% endblock %}
